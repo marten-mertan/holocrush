@@ -1,17 +1,22 @@
 <template>
   <div class="page">
-    HELLO
+    <Game />
   </div>
 </template>
 
 <script>
-export default {
-  name: 'IndexPage'
-}
+  import Game from '@/components/Game';
+
+  export default {
+    name: 'IndexPage',
+    components: {
+      Game,
+    }
+  }
 </script>
 
 <style lang="scss">
   .page {
-    
+
   }
 </style>
