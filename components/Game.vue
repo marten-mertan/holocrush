@@ -166,7 +166,7 @@
       }
 
       &.in-streak {
-        background-color: aqua;
+        background-color: purple;
       }
     }
   }
