@@ -55,6 +55,7 @@
           ],
           cells: [],
           pickedCell: null,
+          cellsInStreak: [],
         },
         game: {
           status: 'loading',
@@ -70,20 +71,8 @@
       },
 
       mouseUp(cell) {
-        const firstCell = {...this.field.pickedCell};
-        const lastCell = {...cell};
-        if (Math.abs(lastCell.x - firstCell.x) + Math.abs(lastCell.y - firstCell.y) === 1) {
-
-          // присваиваем новые значения поменяным ячейкам с сохранением индексов ячеек
-          this.field.cells[firstCell.id].x = lastCell.x;
-          this.field.cells[firstCell.id].y = lastCell.y;
-          this.field.cells[firstCell.id].id = lastCell.id;
-          this.field.cells[lastCell.id].x = firstCell.x;
-          this.field.cells[lastCell.id].y = firstCell.y;
-          this.field.cells[lastCell.id].id = firstCell.id;
-
-          // меняем местами ячейки в массиве
-          [this.field.cells[firstCell.id], this.field.cells[lastCell.id]] = [this.field.cells[lastCell.id], this.field.cells[firstCell.id]]; 
+        if (Math.abs(cell.x - this.field.pickedCell.x) + Math.abs(cell.y - this.field.pickedCell.y) === 1) {
+          this.swapTwoCells(this.field.pickedCell, cell);
 
           //
           // проигрываем анимацию
@@ -91,18 +80,10 @@
 
           setTimeout(() => { 
             if (this.isFieldHasStreaks()) {
-              console.log('nice')
+              this.game.status = 'falling';
+              this.removeStreaks();
             } else {
-              // присваиваем новые значения поменяным ячейкам с сохранением индексов ячеек
-              this.field.cells[firstCell.id].x = lastCell.x;
-              this.field.cells[firstCell.id].y = lastCell.y;
-              this.field.cells[firstCell.id].id = lastCell.id;
-              this.field.cells[lastCell.id].x = firstCell.x;
-              this.field.cells[lastCell.id].y = firstCell.y;
-              this.field.cells[lastCell.id].id = firstCell.id;
-
-              // меняем местами ячейки в массиве
-              [this.field.cells[firstCell.id], this.field.cells[lastCell.id]] = [this.field.cells[lastCell.id], this.field.cells[firstCell.id]]; 
+              this.swapTwoCells(this.field.pickedCell, cell);
             }
 
             this.field.pickedCell = null;
@@ -139,6 +120,13 @@
         }
 
         this.game.status = 'picking';
+      },
+
+      setRandomCell(id) {
+        const randomTile = this.field.availableTiles[Math.floor(Math.random()*this.field.availableTiles.length)];
+        this.field.cells[id].icon = randomTile.icon;
+        this.field.cells[id].value = randomTile.value;
+        this.field.cells[id].name = randomTile.name;
       },
 
       isCellInVerticalStreak(cell) {
@@ -184,13 +172,96 @@
       },
 
       isFieldHasStreaks() {
+        this.field.cellsInStreak = [];
         for (let i=0; i<this.field.cells.length; i++) {
           if (this.isCellInStreak(this.field.cells[i])) {
+            this.field.cellsInStreak.push(this.field.cells[i]);
+          }
+        }
+
+        return this.field.cellsInStreak.length ? true : false;
+      },
+
+      removeStreaks() {
+        if (this.field.cellsInStreak.length) {
+          const len = this.field.cellsInStreak.length;
+          for (let i=0; i<len; i++) {
+            this.field.cells[this.field.cellsInStreak[i].id].value = -1;
+            this.field.cells[this.field.cellsInStreak[i].id].name = 'empty';
+            this.field.cells[this.field.cellsInStreak[i].id].icon = null;
+          }
+          this.cellsFalling();
+        }
+      },
+
+      swapTwoCells(firstCell, secondCell) {
+        const firstTempCell = {...firstCell};
+        const lastTempCell = {...secondCell};
+
+        // присваиваем новые значения поменяным ячейкам с сохранением индексов ячеек
+        this.field.cells[firstTempCell.id].x = lastTempCell.x;
+        this.field.cells[firstTempCell.id].y = lastTempCell.y;
+        this.field.cells[firstTempCell.id].id = lastTempCell.id;
+        this.field.cells[lastTempCell.id].x = firstTempCell.x;
+        this.field.cells[lastTempCell.id].y = firstTempCell.y;
+        this.field.cells[lastTempCell.id].id = firstTempCell.id;
+
+        // меняем местами ячейки в массиве
+        [this.field.cells[firstTempCell.id], this.field.cells[lastTempCell.id]] = [this.field.cells[lastTempCell.id], this.field.cells[firstTempCell.id]]; 
+      },
+
+      isFieldHasEmpties() {
+        const len = this.field.cells.length;
+        for (let i=0; i<len; i++) {
+          if (this.field.cells[i].value === -1) {
             return true;
           }
         }
         return false;
-      }
+      },
+
+      cellsFalling() {
+        const len = this.field.cells.length;
+        const y = this.field.height;
+        const x = this.field.width;
+        for (let i=0; i<x; i++) {
+          for (let j=y-1; j>=0; j--) {
+            if (this.field.cells[j*x+i].value === -1) {
+              let isCellExist = false;
+              // ищем первый тайл с нужным значением выше
+              for(let m = j-1; m>=0; m--) {
+                if (this.field.cells[m*x+i].value !== -1) {
+                  isCellExist = true;
+                  this.swapTwoCells(this.field.cells[j*x+i], this.field.cells[m*x+i]);
+                  break;
+                }
+              }
+
+              if (!isCellExist) {
+                break;
+              }
+            }
+          }
+        }
+
+        //
+        // проигрываем анимацию
+        //
+
+        setTimeout(() => {
+          for (let i=0; i<this.field.cells.length; i++) {
+            if (this.field.cells[i].value === -1) {
+              this.setRandomCell(i);
+            }
+          }
+
+          setTimeout(() => {
+            if (this.isFieldHasStreaks()) {
+              this.removeStreaks();
+            }
+          }, 300);
+        }, 300);
+      },
     },
 
     mounted() {
@@ -217,9 +288,10 @@
       align-items: center;
       width: 80px;
       height: 80px;
+      transform: translate3d(0, 0, 0);
 
       &-move {
-        transition: transform .3s ease-in-out;
+        transition: transform .3s ease;
       }
 
       svg {
